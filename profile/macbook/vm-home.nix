@@ -13,7 +13,7 @@
 
   imports = [
     ../common/options.nix # settings block + base features (fish, neovim, cli.*, fonts, xdg)
-    ../dev-vm/options.nix # dev features (docker, llm, ai, git, github, langs, database, web, ide)
+    ../dev-vm/options.nix # dev features (docker, llm, ai, git, github, atlassian, langs, database, web, ide)
     ../../system/home-manager
   ];
 
@@ -21,6 +21,8 @@
   features.development.ai.claude.enable = lib.mkForce false;
   features.development.ai.cursor-cli.enable = true;
 
-  home.shellAliases.agent = "cursor-agent --yolo";
+  features.shell.fish.enable = true;
+  programs.fish.enable = true;
+
   programs.fish.shellAliases.agent = "cursor-agent --yolo";
 }

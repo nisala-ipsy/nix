@@ -53,6 +53,8 @@ in
       {
         imports = [ inputs.home-manager.nixosModules.home-manager ];
 
+        nixpkgs.config.allowUnfree = true;
+
         # A dev env is heavier than a build-only VM.
         virtualisation = {
           cores = 6;

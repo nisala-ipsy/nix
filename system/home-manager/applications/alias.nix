@@ -3,6 +3,7 @@ let
   alias = {
     # ssh
     dev = "kitten ssh dev";
+    agent = "cursor-agent --yolo";
 
     # kubectl
     k = "kubectl";

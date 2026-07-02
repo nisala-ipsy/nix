@@ -121,6 +121,7 @@ in
       ]
     )
     ++ lib.optionals f.development.github.enable (with pkgs; [ gh ])
+    ++ lib.optionals f.development.atlassian.enable (with pkgs; [ acli ])
     ++ lib.optionals f.development.virtualization.enable (
       with pkgs;
       [
