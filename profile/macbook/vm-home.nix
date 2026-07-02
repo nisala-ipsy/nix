@@ -18,11 +18,14 @@
   ];
 
   # This profile uses the Cursor CLI in place of Claude Code.
-  features.development.ai.claude.enable = lib.mkForce false;
-  features.development.ai.cursor-cli.enable = true;
+  features = {
+    development.ai.claude.enable = lib.mkForce false;
+    development.ai.cursor-cli.enable = true;
+    cli.starship.enable = true;
+    shell.fish.enable = true;
+  };
 
-  features.shell.fish.enable = true;
-  programs.fish.enable = true;
-
-  programs.fish.shellAliases.agent = "cursor-agent --yolo";
+  programs = { 
+    fish.enable = true;
+  };
 }
