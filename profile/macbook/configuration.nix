@@ -2,6 +2,14 @@
 let
   username = "s1n7ax";
 
+  # QEMU user networking on macOS can't use the SLiRP DNS relay (10.0.2.3), so the
+  # linux-builder defaults to 8.8.8.8. Use the macOS host resolvers instead
+  # (see /etc/resolv.conf or `scutil --dns`).
+  hostNameservers = [
+    "10.75.65.96"
+    "10.75.83.34"
+  ];
+
   # The linux-builder VM is aarch64-linux, so its home-manager modules need an
   # aarch64-linux unstable package set (the host darwinArgs pkgs-unstable is
   # aarch64-darwin). cursor-cli lives in unstable only.
@@ -41,7 +49,7 @@ in
     maxJobs = 4;
 
     config =
-      { ... }:
+      { lib, ... }:
       {
         imports = [ inputs.home-manager.nixosModules.home-manager ];
 
@@ -58,6 +66,13 @@ in
           "nix-command"
           "flakes"
         ];
+
+        networking.nameservers = lib.mkForce hostNameservers;
+
+        # Don't let dhcpcd push QEMU's SLiRP DNS (10.0.2.3); use hostNameservers via resolvconf.
+        networking.dhcpcd.extraConfig = lib.mkAfter ''
+          nooption domain_name_servers
+        '';
 
         # Docker daemon so the home-manager `virtualization.docker` feature works.
         virtualisation.docker.enable = true;
