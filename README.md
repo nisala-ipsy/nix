@@ -130,6 +130,18 @@ ssh -p 31022 s1n7ax@localhost
 Inside the VM `cursor-agent`, `nvim`, `fish`, `git`, `docker`, and the language
 toolchains are all available.
 
+**Stuck or zombie linux-builder:** if `darwin-rebuild` hangs, SSH to the VM
+fails while QEMU is still running, or launchd won't restart the builder cleanly,
+force-kill the VM and its launcher processes, then switch again:
+
+```shell
+sudo pkill -f 'qemu-system-aarch64|create-builder'
+sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook
+```
+
+This is the reliable reset — other stop/restart paths (launchctl, killing only
+the QEMU PID) did not work in practice.
+
 ### Additional Commands
 
 ```shell
