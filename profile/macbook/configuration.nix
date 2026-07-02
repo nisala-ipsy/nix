@@ -74,6 +74,8 @@ in
           nooption domain_name_servers
         '';
 
+        virtualisation.useHostCerts = lib.mkForce true;
+
         # Docker daemon so the home-manager `virtualization.docker` feature works.
         virtualisation.docker.enable = true;
 
