@@ -6,6 +6,7 @@
   # so the VM needs no age key.
   imports = [
     ./vm-options.nix
+    ./linux-builder-home-activation-hm.nix
     ../../system/home-manager
   ];
 

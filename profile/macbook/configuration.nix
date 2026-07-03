@@ -2,17 +2,11 @@
 let
   username = "s1n7ax";
 
-  # QEMU user networking on macOS can't use the SLiRP DNS relay (10.0.2.3), so the
-  # linux-builder defaults to 8.8.8.8. Use the macOS host resolvers instead
-  # (see /etc/resolv.conf or `scutil --dns`).
   hostNameservers = [
     "10.75.65.96"
     "10.75.83.34"
   ];
 
-  # The linux-builder VM is aarch64-linux, so its home-manager modules need an
-  # aarch64-linux unstable package set (the host darwinArgs pkgs-unstable is
-  # aarch64-darwin). cursor-cli lives in unstable only.
   pkgsUnstableLinux = import inputs.nixpkgs-unstable {
     system = "aarch64-linux";
     config.allowUnfree = true;
@@ -21,7 +15,6 @@ in
 {
   imports = [ inputs.home-manager.darwinModules.home-manager ];
 
-  # Apple Silicon (M1) on the latest macOS.
   nixpkgs.hostPlatform = "aarch64-darwin";
   nixpkgs.config.allowUnfree = true;
 
@@ -30,22 +23,12 @@ in
       "nix-command"
       "flakes"
     ];
-    # Required so the user may use the linux-builder as a remote builder.
     trusted-users = [
       "@admin"
       username
     ];
   };
 
-  # microvm.nix cannot run on Darwin (NixOS/KVM only); the linux-builder is
-  # nix-darwin's supported lightweight NixOS VM, doubling as a Linux remote
-  # builder for aarch64-linux derivations.
-  #
-  # We also repurpose it as a headless dev box: a dedicated `s1n7ax` user runs the
-  # shared home-manager tree with the same features as the microvm (dev-vm), so
-  # dev tooling lives in the VM instead of on macOS. The `builder` user stays
-  # reserved for Nix remote builds. See README for the bootstrap caveat (a
-  # customized builder must be built by an already-running builder) and login.
   nix.linux-builder = {
     enable = true;
     maxJobs = 4;
@@ -53,11 +36,13 @@ in
     config =
       { lib, ... }:
       {
-        imports = [ inputs.home-manager.nixosModules.home-manager ];
+        imports = [
+          inputs.home-manager.nixosModules.home-manager
+          ./linux-builder-home-activation.nix
+        ];
 
         nixpkgs.config.allowUnfree = true;
 
-        # A dev env is heavier than a build-only VM.
         virtualisation = {
           cores = 6;
           darwin-builder = {
@@ -72,21 +57,15 @@ in
         ];
 
         networking.nameservers = lib.mkForce hostNameservers;
-
-        # Don't let dhcpcd push QEMU's SLiRP DNS (10.0.2.3); use hostNameservers via resolvconf.
         networking.dhcpcd.extraConfig = lib.mkAfter ''
           nooption domain_name_servers
         '';
 
         virtualisation.useHostCerts = lib.mkForce true;
-
-        # Docker daemon so the home-manager `virtualization.docker` feature works.
         virtualisation.docker.enable = true;
 
-        # fish is the login shell for the dev user.
         programs.fish.enable = true;
 
-        # Local-only VM: allow first login by password, then switch to keys.
         services.openssh.settings.PasswordAuthentication = true;
 
         users.users.${username} = {
@@ -97,7 +76,6 @@ in
             "docker"
           ];
           shell = pkgs.fish;
-          # Change immediately after first login (or add an SSH key).
           initialPassword = "changeme";
         };
 
@@ -121,22 +99,17 @@ in
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
+    backupFileExtension = "hm-backup";
     extraSpecialArgs = {
       inherit inputs pkgs-unstable;
     };
     users.${username} = import ./home.nix;
   };
-  # nix-darwin applies user-scoped defaults (e.g. the Dock) for this user.
-  system.primaryUser = username;
 
-  # Auto-hide the Dock.
+  system.primaryUser = username;
   system.defaults.dock.autohide = true;
+  system.stateVersion = 6;
 
   programs.fish.enable = true;
-
   fonts.packages = [ pkgs.nerd-fonts.iosevka ];
-
-  # Used for backwards compatibility; read the nix-darwin changelog before
-  # changing.
-  system.stateVersion = 6;
 }
