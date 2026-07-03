@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ pkgs, inputs, pkgs-unstable, ... }:
 let
   username = "s1n7ax";
 
@@ -19,6 +19,8 @@ let
   };
 in
 {
+  imports = [ inputs.home-manager.darwinModules.home-manager ];
+
   # Apple Silicon (M1) on the latest macOS.
   nixpkgs.hostPlatform = "aarch64-darwin";
   nixpkgs.config.allowUnfree = true;
@@ -115,6 +117,15 @@ in
     name = username;
     home = "/Users/${username}";
   };
+
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    extraSpecialArgs = {
+      inherit inputs pkgs-unstable;
+    };
+    users.${username} = import ./home.nix;
+  };
   # nix-darwin applies user-scoped defaults (e.g. the Dock) for this user.
   system.primaryUser = username;
 
@@ -123,7 +134,6 @@ in
 
   programs.fish.enable = true;
 
-  # Make the terminal font available system-wide for kitty.
   fonts.packages = [ pkgs.nerd-fonts.iosevka ];
 
   # Used for backwards compatibility; read the nix-darwin changelog before

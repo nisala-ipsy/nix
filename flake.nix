@@ -91,15 +91,6 @@
 
           modules = [
             ./profile/macbook/configuration.nix
-            home-manager.darwinModules.home-manager
-            {
-              home-manager = {
-                extraSpecialArgs = darwinArgs;
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                users.s1n7ax = import ./profile/macbook/home.nix;
-              };
-            }
           ];
         };
       };
