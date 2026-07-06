@@ -1,5 +1,16 @@
-{ lib, config, ... }:
+{ lib, config, pkgs, ... }:
 let
+  linuxNixAliases = {
+    nixos = "cd ~/Workspace/nixos && sudo nix flake update && sudo nixos-rebuild switch --upgrade --flake ./#desktop";
+    nixos-clean = "nix-collect-garbage -d && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot && sudo nix-store --optimise";
+  };
+
+  darwinNixAliases = {
+    mac-rebuild = "cd ~/nixos && nix flake update && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ./#macbook";
+    mac-vm = "sudo pkill -f 'qemu-system-aarch64|create-builder' || true; sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook";
+    mac-clean = "nix-collect-garbage -d && sudo nix-collect-garbage -d && nix-store --optimise";
+  };
+
   alias = {
     # ssh
     dev = "kitten ssh dev";
@@ -94,11 +105,9 @@ let
 
     # home manager
     hm = "cd ~/Workspace/home-manager && nix flake update && home-manager --impure switch --refresh --flake ./#desktop";
-
-    # nixos
-    nixos = "cd ~/Workspace/nixos && sudo nix flake update && sudo nixos-rebuild switch --upgrade --flake ./#desktop";
-    nixos-clean = "nix-collect-garbage -d && sudo nix-collect-garbage -d && sudo /run/current-system/bin/switch-to-configuration boot && sudo nix-store --optimise";
-  };
+  }
+  // lib.optionalAttrs pkgs.stdenv.isLinux linuxNixAliases
+  // lib.optionalAttrs pkgs.stdenv.isDarwin darwinNixAliases;
 in
 lib.mkIf config.features.cli.alias.enable {
   home.shellAliases = alias;
