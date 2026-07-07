@@ -54,13 +54,19 @@ sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook
 ```
 
 The VM's `/home` lives on a dedicated ext4 disk image
-(`/var/lib/linux-builder/empty0.qcow2`), not a 9p share — native filesystem
-speed, and it survives VM restarts and the "recreate disk" step above. Files
-live *inside* the image and are not visible from macOS Finder; reach them over
-ssh/scp (`scp -P 31022 <username>@localhost:...`). To wipe home, delete
-`empty0.qcow2` (it's re-created blank and auto-formatted on next boot). To grow
-it: `sudo qemu-img resize /var/lib/linux-builder/empty0.qcow2 +20G`, then
-restart the builder — `autoResize` expands the filesystem to fill it.
+(`/var/lib/linux-builder/home.qcow2`), not a 9p share — native filesystem
+speed, and it survives VM restarts and the "recreate disk" step above (that
+step only removes `nixos.qcow2`). The image is pre-created on the host during
+`darwin-rebuild switch` and attached to the VM by absolute path via
+`virtualisation.qemu.drives`; it is *not* a `virtualisation.emptyDiskImages`
+disk, because those are created in the builder's ephemeral runtime dir
+(`/run/org.nixos.linux-builder`, wiped on every VM restart) and so never
+persist. Files live *inside* the image and are not visible from macOS Finder;
+reach them over ssh/scp (`scp -P 31022 <username>@localhost:...`). To wipe home,
+delete `home.qcow2` (it's re-created blank and auto-formatted on next switch /
+boot). To grow it: `sudo qemu-img resize /var/lib/linux-builder/home.qcow2
++20G`, then restart the builder — `autoResize` expands the filesystem to fill
+it.
 
 ### Common macOS commands
 

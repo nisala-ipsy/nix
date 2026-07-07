@@ -15,6 +15,12 @@ let
     "10.75.83.34"
   ];
 
+  # Persistent disk backing the linux-builder VM's /home. Lives in the builder's
+  # working directory so it survives VM restarts and `rm nixos.qcow2`. Attached
+  # to the VM via `virtualisation.qemu.drives` and pre-created on the host by
+  # `system.activationScripts.extraActivation` (both below).
+  linuxBuilderHomeDisk = "/var/lib/linux-builder/home.qcow2";
+
   pkgsUnstableLinux = import inputs.nixpkgs-unstable {
     system = "aarch64-linux";
     config.allowUnfree = true;
@@ -62,18 +68,32 @@ in
           # Back the dev user's home with a dedicated, persistent ext4 disk
           # image instead of a 9p share. This gives native filesystem speed and
           # semantics (inotify, hardlinks, fsync) — 9p is painfully slow for
-          # git / node_modules / build workloads. The image is a qcow2 stored
-          # next to nixos.qcow2 at /var/lib/linux-builder/empty0.qcow2, so all
-          # of /home (dotfiles, shell history, cloned repos, caches) survives VM
-          # restarts AND the README's "recreate nixos.qcow2" step. Trade-off vs
-          # the old 9p workspace: files live *inside* the image and are no
-          # longer visible from macOS — reach them over ssh/scp into the VM.
-          emptyDiskImages = [
+          # git / node_modules / build workloads.
+          #
+          # The image MUST live in the builder's persistent working directory
+          # (/var/lib/linux-builder). We deliberately do NOT use
+          # `virtualisation.emptyDiskImages`: the nix-darwin linux-builder
+          # daemon runs the VM with TMPDIR=/run/org.nixos.linux-builder and
+          # `rm -rf`s that dir on every start and stop, and emptyDiskImages are
+          # always created *there* (the runner `cd`s into TMPDIR) — so they get
+          # wiped on every VM restart and re-formatted blank. Only NIX_DISK_IMAGE
+          # (nixos.qcow2) is placed in the persistent working dir. So we instead
+          # attach our own drive by absolute path via `qemu.drives`, and
+          # pre-create the qcow2 on the host in `system.activationScripts` (see
+          # `linuxBuilderHomeDisk` below) since QEMU won't create a `-drive
+          # file=` target itself. This survives VM restarts AND the README's
+          # "recreate nixos.qcow2" step. Trade-off vs the old 9p workspace:
+          # files live *inside* the image and are no longer visible from
+          # macOS — reach them over ssh/scp into the VM.
+          #
+          # serial=home => udev exposes it at /dev/disk/by-id/virtio-home, a
+          # stable path independent of drive enumeration order.
+          qemu.drives = [
             {
-              size = 60 * 1024; # 60 GiB, thin-provisioned qcow2
-              # serial => udev exposes it at /dev/disk/by-id/virtio-home, a
-              # stable path independent of drive enumeration order.
-              driveConfig.deviceExtraOpts.serial = "home";
+              name = "home";
+              file = linuxBuilderHomeDisk;
+              driveExtraOpts.werror = "report";
+              deviceExtraOpts.serial = "home";
             }
           ];
 
@@ -149,6 +169,23 @@ in
         };
       };
   };
+
+  # Pre-create the linux-builder's persistent /home disk on the host before the
+  # VM boots. QEMU won't create a `-drive file=` target itself (unlike
+  # NIX_DISK_IMAGE / emptyDiskImages, which the runner auto-creates), and the
+  # builder daemon opens this drive with werror=report — a missing file would
+  # abort VM start. extraActivation runs during `darwin-rebuild switch` before
+  # the launchd `linux-builder` daemon is (re)loaded, and the file then persists
+  # across reboots. The image is blank (no filesystem); the VM's `autoFormat`
+  # mkfs's it on first boot. Thin qcow2, so it costs ~nothing until used. Only
+  # created for the custom builder — the stock bootstrap builder ignores it.
+  system.activationScripts.extraActivation.text = lib.optionalString (!bootstrapStockBuilder) ''
+    if [ ! -e ${linuxBuilderHomeDisk} ]; then
+      echo "creating linux-builder home disk (${linuxBuilderHomeDisk})..."
+      mkdir -p "$(dirname ${linuxBuilderHomeDisk})"
+      ${pkgs.qemu-utils}/bin/qemu-img create -f qcow2 ${linuxBuilderHomeDisk} 60G
+    fi
+  '';
 
   users.users.${username} = {
     name = username;
