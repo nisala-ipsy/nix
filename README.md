@@ -1,162 +1,92 @@
-# Welcome to my NixOS configuration
+# s1n7ax's Nix configuration
 
-## Prerequisites
+Declarative config for a Linux desktop, a Linux server, and an Apple Silicon MacBook.
 
-- You have to change the hardware-configuration.nix inside the profile to match
-  your hardware
+## macOS setup (Apple Silicon)
 
-## How to use
-
-- Clone the repository
+### First-time setup
 
 ```shell
-git clone https://github.com/s1n7ax/nixos.git
-```
-
-- Update flakes
-
-```shell
-nix flake update
-```
-
-- Install the system
-
-```shell
-sudo nixos-rebuild switch --upgrade --flake ./#desktop
-                                              #^^^^^^^^ profile name here
-```
-
-## Rebuilding Profiles
-
-### Available Profiles
-
-This configuration supports multiple profiles:
-- **desktop**: Full desktop environment with gaming, multimedia, and development tools
-- **server**: Minimal server profile with most desktop features disabled
-- **macbook**: nix-darwin profile for Apple Silicon macOS (built with `darwin-rebuild`, not `nixos-rebuild`)
-
-### Rebuild Commands
-
-#### Desktop Profile
-```shell
-# Build and switch to desktop profile
-sudo nixos-rebuild switch --upgrade --flake ./#desktop
-
-# Test desktop configuration without switching
-sudo nixos-rebuild test --flake ./#desktop
-
-# Build desktop configuration without switching
-sudo nixos-rebuild build --flake ./#desktop
-```
-
-#### Server Profile
-```shell
-# Build and switch to server profile
-sudo nixos-rebuild switch --upgrade --flake ./#server
-
-# Test server configuration without switching
-sudo nixos-rebuild test --flake ./#server
-
-# Build server configuration without switching
-sudo nixos-rebuild build --flake ./#server
-```
-
-#### macOS (macbook Profile)
-
-This profile is managed by [nix-darwin](https://github.com/nix-darwin/nix-darwin),
-so use `darwin-rebuild` instead of `nixos-rebuild`. The flake output is named
-`macbook`, **not** the machine's hostname — always select it with `#macbook`.
-
-First-time bootstrap (before `darwin-rebuild` exists on the system):
-
-```shell
-# Run darwin-rebuild straight from the nix-darwin flake to install it.
-# --extra-experimental-features is required if nix-command/flakes aren't
-# already enabled in the stock macOS Nix install.
+sh <(curl -L https://nixos.org/nix/install) --daemon
+exec $SHELL -l
+git clone https://github.com/s1n7ax/nixos.git ~/nixos
+cd ~/nixos
 sudo nix run --extra-experimental-features 'nix-command flakes' \
   nix-darwin/nix-darwin-26.05#darwin-rebuild -- switch --flake ~/nixos#macbook
 ```
 
-After the first successful switch, `darwin-rebuild` is installed at
-`/run/current-system/sw/bin`. Subsequent rebuilds:
-
-`sudo` strips the Nix directories from `PATH` via `secure_path`, so a plain
-`sudo darwin-rebuild` fails with `command not found`. Invoke it by full path:
+### Update and rebuild
 
 ```shell
-# Build and switch to the macbook profile
+cd ~/nixos
+nix flake update
+sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook
+```
+
+### Linux build VM (linux-builder)
+
+`bootstrapStockBuilder` in `profile/macbook/configuration.nix`:
+
+- `true` (default) — stock builder, downloaded prebuilt. Leave here for a working machine.
+- `false` — customized dev VM (fish, nvim, git, docker, cursor-agent). Only after step 4.
+
+```shell
+# Verify builder is up
+sudo ssh linux-builder uname -m          # -> aarch64-linux
+
+# Switch to custom VM: set bootstrapStockBuilder = false, then:
 sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook
 
-# Build the macbook configuration without switching
-sudo /run/current-system/sw/bin/darwin-rebuild build --flake ~/nixos#macbook
+# Recreate disk so custom diskSize applies (home survives — see below)
+sudo launchctl bootout system/org.nixos.linux-builder
+sudo rm /var/lib/linux-builder/nixos.qcow2
+sudo launchctl bootstrap system /Library/LaunchDaemons/org.nixos.linux-builder.plist
 
-# Check what would change (dry run)
-sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook --dry-run
-```
+# Log into the VM (password: changeme)
+ssh -p 31022 <username>@localhost
 
-> **Note:** the `--flake ~/nixos#macbook` argument is required. A bare
-> `darwin-rebuild switch` defaults to the flake at `/etc/nix-darwin` keyed by
-> hostname and will fail with a missing-`darwinConfigurations` attribute error.
+# If builder is broken and can't rebuild itself:
+#   set bootstrapStockBuilder = true, switch, set false, switch again.
 
-##### Dev VM (linux-builder)
-
-`microvm.nix` can't run on macOS, so the macbook profile repurposes nix-darwin's
-`linux-builder` (an aarch64-linux NixOS VM) as a headless dev box. A dedicated
-`s1n7ax` user inside the VM runs the same home-manager feature set as the Linux
-`dev-vm`, except **Claude Code is replaced by the Cursor CLI** (`cursor-agent`).
-The `builder` user is left untouched for Nix remote builds; dev tooling lives in
-the VM, not on the macOS host.
-
-> **Bootstrap caveat:** a customized `linux-builder` must be built by an
-> *already-running* Linux builder. Run the normal switch while the current
-> builder is up so it builds its own replacement:
->
-> ```shell
-> sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook
-> ```
->
-> If the builder ever can't rebuild itself, set `nix.linux-builder.enable =
-> false`, switch, then re-enable it and switch again.
-
-The VM runs as a launchd daemon after a switch — no manual start needed. Log in
-as the dev user (find the port in `/etc/ssh/ssh_config.d/*linux-builder*`,
-default `31022`):
-
-```shell
-# First login uses the password `changeme` — change it, or add an SSH key.
-ssh -p 31022 s1n7ax@localhost
-```
-
-Inside the VM `cursor-agent`, `nvim`, `fish`, `git`, `docker`, and the language
-toolchains are all available.
-
-**Stuck or zombie linux-builder:** if `darwin-rebuild` hangs, SSH to the VM
-fails while QEMU is still running, or launchd won't restart the builder cleanly,
-force-kill the VM and its launcher processes, then switch again:
-
-```shell
+# Stuck / zombie builder
 sudo pkill -f 'qemu-system-aarch64|create-builder'
 sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook
 ```
 
-This is the reliable reset — other stop/restart paths (launchctl, killing only
-the QEMU PID) did not work in practice.
+The VM's `/home` lives on a dedicated ext4 disk image
+(`/var/lib/linux-builder/empty0.qcow2`), not a 9p share — native filesystem
+speed, and it survives VM restarts and the "recreate disk" step above. Files
+live *inside* the image and are not visible from macOS Finder; reach them over
+ssh/scp (`scp -P 31022 <username>@localhost:...`). To wipe home, delete
+`empty0.qcow2` (it's re-created blank and auto-formatted on next boot). To grow
+it: `sudo qemu-img resize /var/lib/linux-builder/empty0.qcow2 +20G`, then
+restart the builder — `autoResize` expands the filesystem to fill it.
 
-### Additional Commands
+### Common macOS commands
 
 ```shell
-# Apply home-manager changes only (faster for user-level changes)
-home-manager switch --flake ./#desktop
+nix flake update                                                                   # update inputs
+sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook --dry-run
+sudo /run/current-system/sw/bin/darwin-rebuild switch --rollback                   # undo
+sudo nix-collect-garbage -d                                                        # free space
+```
 
-# Update flakes to latest versions
+## NixOS (Linux) setup
+
+Replace `hardware-configuration.nix` in the profile to match your hardware first.
+
+Profiles: `desktop` (full DE), `server` (minimal), `macbook` (see above).
+
+```shell
+git clone https://github.com/s1n7ax/nixos.git
+cd nixos
+
+sudo nixos-rebuild switch --upgrade --flake ./#desktop   # or ./#server
+sudo nixos-rebuild test --flake ./#desktop               # test, no boot default
+sudo nixos-rebuild build --flake ./#desktop              # build only
+
+home-manager switch --flake ./#desktop                   # user-level only
 nix flake update
-
-# Check flake syntax and evaluate
 nix flake check
-
-# Show what would be built/downloaded (dry run)
-nixos-rebuild switch --flake ./#desktop --dry-run
-
-# Garbage collect old generations
 sudo nix-collect-garbage -d
 ```
