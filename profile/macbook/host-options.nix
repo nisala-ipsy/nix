@@ -1,6 +1,6 @@
 { ... }:
 {
-  settings.font.size =  20;
+  settings.font.size =  26;
 
   features = {
     terminal.kitty.enable = true;
