@@ -1,8 +1,4 @@
-{
-  inputs,
-  config,
-  ...
-}:
+{ config, ... }:
 {
   home.username = config.settings.username;
   home.homeDirectory = "/home/${config.settings.username}";
@@ -10,7 +6,7 @@
 
   imports = [
     ./options.nix
-    "${inputs.secrets}/modules/home-manager.nix"
+    ../../secrets/modules/home-manager.nix
 
     ../../system/home-manager
   ];

@@ -7,10 +7,15 @@ lib.mkIf config.features.shell.fish.enable {
 
   programs.fish = {
     enable = true;
-    shellInit = ''
-      stty -ixon
+    shellInit =
+      lib.optionalString pkgs.stdenv.isDarwin ''
+        fish_add_path -gm /etc/profiles/per-user/${config.home.username}/bin /run/current-system/sw/bin $HOME/.nix-profile/bin /opt/homebrew/bin /opt/homebrew/sbin
 
-      set -x PATH $PATH ~/.cargo/bin 
+      ''
+      + ''
+        stty -ixon
+
+        set -x PATH $PATH ~/.cargo/bin 
 
       # disable greeting
       set -g fish_greeting

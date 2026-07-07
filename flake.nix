@@ -100,7 +100,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     hardware.url = "github:nixos/nixos-hardware";
-    neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";
     microvm = {
       url = "github:microvm-nix/microvm.nix";
@@ -122,10 +121,6 @@
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    secrets = {
-      url = "git+ssh://git@github.com/s1n7ax/nix-secrets.git?ref=main&shallow=1";
-      flake = false;
     };
   };
 }

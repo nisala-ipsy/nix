@@ -6,9 +6,11 @@ let
   };
 
   darwinNixAliases = {
-    mac-rebuild = "cd ~/nixos && nix flake update && sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ./#macbook";
-    mac-vm = "sudo pkill -f 'qemu-system-aarch64|create-builder' || true; sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook";
+    mac-update = "cd ~/nixos && nix flake update";
+    mac-rebuild = "sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ./#macbook";
+    mac-vm-restart = "sudo pkill -f 'qemu-system-aarch64|create-builder' || true; sudo /run/current-system/sw/bin/darwin-rebuild switch --flake ~/nixos#macbook";
     mac-clean = "nix-collect-garbage -d && sudo nix-collect-garbage -d && nix-store --optimise";
+    dev = "kitty +kitten ssh -p 31022 s1n7ax@localhost";
   };
 
   alias = {

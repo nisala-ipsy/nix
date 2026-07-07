@@ -66,7 +66,7 @@ in
 
         programs.fish.enable = true;
 
-        services.openssh.settings.PasswordAuthentication = true;
+        services.openssh.settings.PasswordAuthentication = false;
 
         users.users.${username} = {
           isNormalUser = true;
@@ -77,6 +77,9 @@ in
           ];
           shell = pkgs.fish;
           initialPassword = "changeme";
+          openssh.authorizedKeys.keys = [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHYKCu+PeBlMZvcbbCYQ3lJLXmsiND2kkrTYeluMCz+n ilabs-srineshanisala@ipsy.com"
+          ];
         };
 
         home-manager = {

@@ -54,7 +54,7 @@ in
 
   imports = [
     inputs.sops-nix.nixosModules.sops
-    "${inputs.secrets}/modules/nixos.nix"
+    ../../secrets/modules/nixos.nix
 
     ../../system/nixos
   ];

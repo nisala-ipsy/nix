@@ -5,6 +5,7 @@
   # self-hosted-service features need sops, and none of those are enabled here,
   # so the VM needs no age key.
   imports = [
+    ../common/options.nix
     ./vm-options.nix
     ./linux-builder-home-activation-hm.nix
     ../../system/home-manager
