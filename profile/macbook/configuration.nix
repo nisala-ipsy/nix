@@ -1,4 +1,4 @@
-{ pkgs, lib, inputs, pkgs-unstable, ... }:
+{ pkgs, lib, inputs, pkgs-unstable, pkgs-node20, ... }:
 let
   username = "s1n7ax";
 
@@ -22,6 +22,11 @@ let
   linuxBuilderHomeDisk = "/var/lib/linux-builder/home.qcow2";
 
   pkgsUnstableLinux = import inputs.nixpkgs-unstable {
+    system = "aarch64-linux";
+    config.allowUnfree = true;
+  };
+
+  pkgsNode20Linux = import inputs.nixpkgs-node20 {
     system = "aarch64-linux";
     config.allowUnfree = true;
   };
@@ -164,6 +169,7 @@ in
           extraSpecialArgs = {
             inherit inputs;
             pkgs-unstable = pkgsUnstableLinux;
+            pkgs-node20 = pkgsNode20Linux;
           };
           users.${username} = import ./vm-home.nix;
         };
@@ -197,7 +203,7 @@ in
     useUserPackages = true;
     backupFileExtension = "hm-backup";
     extraSpecialArgs = {
-      inherit inputs pkgs-unstable;
+      inherit inputs pkgs-unstable pkgs-node20;
     };
     users.${username} = import ./home.nix;
   };

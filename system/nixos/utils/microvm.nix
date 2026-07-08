@@ -3,6 +3,7 @@
   lib,
   inputs,
   pkgs-unstable,
+  pkgs-node20,
   ...
 }:
 
@@ -19,7 +20,7 @@ with lib;
 
     microvm.vms.dev-vm = {
       autostart = true;
-      specialArgs = { inherit inputs pkgs-unstable; };
+      specialArgs = { inherit inputs pkgs-unstable pkgs-node20; };
 
       config =
         { config, ... }:
@@ -34,7 +35,7 @@ with lib;
             useGlobalPkgs = true;
             useUserPackages = true;
             backupFileExtension = "hm-backup";
-            extraSpecialArgs = { inherit inputs pkgs-unstable; };
+            extraSpecialArgs = { inherit inputs pkgs-unstable pkgs-node20; };
             users.${config.settings.username} = import ../../../profile/dev-vm/home.nix;
           };
 

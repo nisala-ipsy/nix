@@ -5,6 +5,7 @@
     {
       nixpkgs,
       nixpkgs-unstable,
+      nixpkgs-node20,
       home-manager,
       sops-nix,
       quadlet-nix,
@@ -16,28 +17,29 @@
       system = "x86_64-linux";
       darwinPlatform = "aarch64-darwin";
 
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
+      importPkgs =
+        nixpkgsInput: targetSystem:
+        import nixpkgsInput {
+          system = targetSystem;
+          config.allowUnfree = true;
+        };
 
-      pkgs-unstable = import nixpkgs-unstable {
-        inherit system;
-        config.allowUnfree = true;
-      };
+      pkgs = importPkgs nixpkgs system;
+
+      pkgs-unstable = importPkgs nixpkgs-unstable system;
+
+      pkgs-node20 = importPkgs nixpkgs-node20 system;
 
       args = {
-        inherit inputs pkgs-unstable;
+        inherit inputs pkgs-unstable pkgs-node20;
       };
       specialArgs = args;
       extraSpecialArgs = args;
 
       darwinArgs = {
         inherit inputs;
-        pkgs-unstable = import nixpkgs-unstable {
-          system = darwinPlatform;
-          config.allowUnfree = true;
-        };
+        pkgs-unstable = importPkgs nixpkgs-unstable darwinPlatform;
+        pkgs-node20 = importPkgs nixpkgs-node20 darwinPlatform;
       };
     in
     {
@@ -99,6 +101,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-node20.url = "github:NixOS/nixpkgs/nixos-24.11";
     hardware.url = "github:nixos/nixos-hardware";
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
     quadlet-nix.url = "github:SEIAROTg/quadlet-nix";

@@ -3,6 +3,7 @@
   config,
   pkgs,
   pkgs-unstable,
+  pkgs-node20,
   ...
 }:
 let
@@ -143,8 +144,8 @@ in
       with pkgs;
       [
         deno
-        nodejs_22
-        pnpm
+        pkgs-node20.nodejs_20
+        pkgs-node20.pnpm
         yarn
         emmet-language-server
         vscode-langservers-extracted
