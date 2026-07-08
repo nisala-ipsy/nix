@@ -218,7 +218,13 @@ in
       ]
     )
     ++ lib.optionals f.development.toml.enable (with pkgs; [ taplo ])
-    ++ lib.optionals f.development.yaml.enable (with pkgs; [ yaml-language-server ])
+    ++ lib.optionals f.development.yaml.enable (
+      with pkgs;
+      [
+        yaml-language-server
+        yq-go
+      ]
+    )
     ++ lib.optionals f.development.database.enable (
       with pkgs;
       [
@@ -235,6 +241,7 @@ in
         httpie
         bruno
         dart-sass
+        jsonnet
       ]
     )
     ++ lib.optionals f.development.ide.enable (with pkgs; [ vscode ])
