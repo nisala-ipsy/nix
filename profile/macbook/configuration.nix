@@ -50,7 +50,7 @@ in
 
   nix.linux-builder = {
     enable = true;
-    maxJobs = 4;
+    maxJobs = 6;
   }
   // lib.optionalAttrs (!bootstrapStockBuilder) {
     config =
@@ -65,9 +65,9 @@ in
         nixpkgs.config.allowUnfree = true;
 
         virtualisation = {
-          cores = 6;
+          cores = 8;
           darwin-builder = {
-            memorySize = 8 * 1024;
+            memorySize = 10 * 1024;
             diskSize = 60 * 1024;
           };
 
@@ -115,6 +115,19 @@ in
             autoResize = true;
           };
 
+          forwardPorts = lib.mkAfter (
+            map (p: {
+              from = "host";
+              host.port = p;
+              guest.port = p;
+            }) [
+              3000
+              8000
+              8443
+              8001
+              8444
+            ]
+          );
         };
 
         # NixOS's createHome runs in stage-2 activation *before* systemd mounts
