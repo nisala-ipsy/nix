@@ -371,7 +371,10 @@ with lib;
           enable = mkOption {
             type = types.bool;
             default = false;
-            description = "Cursor CLI (cursor-agent) AI assistant";
+            description = ''
+              Cursor CLI (cursor-agent). Install the official binary to
+              ~/.local/bin; on NixOS, programs.nix-ld provides the dynamic linker.
+            '';
           };
         };
         headroom = {

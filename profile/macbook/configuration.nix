@@ -59,6 +59,7 @@ in
         imports = [
           inputs.home-manager.nixosModules.home-manager
           ./linux-builder-home-activation.nix
+          ../../system/nixos/core/nix-ld.nix
         ];
 
         nixpkgs.config.allowUnfree = true;
@@ -113,6 +114,7 @@ in
             autoFormat = true;
             autoResize = true;
           };
+
         };
 
         # NixOS's createHome runs in stage-2 activation *before* systemd mounts
